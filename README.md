@@ -1,6 +1,6 @@
 # QR_code_generator
 
-how to run 
+how to run on linux
 
 1. navigate to parent directory
 2. activate virtual environment by running  "source env/bin/activate" (ignore quotations)
