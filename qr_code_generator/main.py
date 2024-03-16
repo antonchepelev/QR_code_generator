@@ -1,54 +1,50 @@
-from PyQt6 import QtWidgets, QtGui, QtMultimedia, QtMultimediaWidgets
+from PyQt6 import QtWidgets, QtGui, QtCore
 import sys
 import segno
 import io
 from urllib.request import urlopen
+import os
 
 class MyApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("QR Generator")
-        self.setWindowIcon(QtGui.QIcon("my_qr.png"))
+        self.setWindowIcon(QtGui.QIcon("window_icon.png"))
         self.background_color = QtGui.QColor("white") 
         self.color = QtGui.QColor("black") 
         self.inputs()
         
 
     def inputs(self):
-        
+        # Set up the layout
         self.my_layout = QtWidgets.QGridLayout()
 
-        
-        
+        # Radio buttons for QR code type selection
         self.normal_qr_option = QtWidgets.QRadioButton("Normal")
         self.animated_qr_option = QtWidgets.QRadioButton("Animated")
         self.animated_qr_option.clicked.connect(self.toggle_animated)
         self.normal_qr_option.clicked.connect(self.toggle_animated)
         self.normal_qr_option.setChecked(True)
-        self.my_layout.addWidget(self.normal_qr_option)
-        self.my_layout.addWidget(self.animated_qr_option)
-
-
-        
+        self.my_layout.addWidget(self.normal_qr_option,0,0)
+        self.my_layout.addWidget(self.animated_qr_option,0,1)
 
         # QTextEdit for input data
         self.data_text_edit = QtWidgets.QLineEdit()
-        self.data_text_edit_label = QtWidgets.QLabel("Data/Url")
         
         self.data_text_edit.setPlaceholderText("Enter data/url here")
-    
-        self.my_layout.addWidget(self.data_text_edit_label)
+        
         self.my_layout.addWidget(self.data_text_edit)
         self.data_text_edit.textChanged.connect(self.update_qr)
 
-        
-        self.background_color_button = QtWidgets.QPushButton("pick background color")
-        self.background_color_button.clicked.connect(lambda:self.pickColor(background=True))
-        self.my_layout.addWidget(self.background_color_button,2,2)
+        # Button to pick background color
+        self.background_color_button = QtWidgets.QPushButton("Pick background color")
+        self.background_color_button.clicked.connect(lambda: self.pickColor(background=True))
+        self.my_layout.addWidget(self.background_color_button, 2, 0)
 
-        self.color_button = QtWidgets.QPushButton("pick color")
-        self.color_button.clicked.connect(lambda:self.pickColor(background=False))
-        self.my_layout.addWidget(self.color_button,2,3)
+        # Button to pick foreground color
+        self.color_button = QtWidgets.QPushButton("Pick color")
+        self.color_button.clicked.connect(lambda: self.pickColor(background=False))
+        self.my_layout.addWidget(self.color_button, 2, 1)
 
         # QLabel to display the QR code
         self.image_label = QtWidgets.QLabel()
@@ -61,130 +57,100 @@ class MyApp(QtWidgets.QWidget):
 
         # Initial empty QR code
         self.update_qr()
-
+        
+        self.save_qr_button = QtWidgets.QPushButton("Save")
+        # self.save_qr_button.clicked.connect(...)
+        self.my_layout.addWidget(self.save_qr_button,5,0)
         # Set the layout
         self.setLayout(self.my_layout)
+
+    # Toggle animated QR code option
     def toggle_animated(self):
         if self.animated_qr_option.isChecked():
+            # Add QLineEdit for GIF link input
             self.gif_text_edit = QtWidgets.QLineEdit()
-            self.generate_animated_qr_code = QtWidgets.QPushButton("Generate ")
+            self.generate_animated_qr_code = QtWidgets.QPushButton("Generate")
             self.generate_animated_qr_code.clicked.connect(self.generate_animated_qr_code_is_clicked)
-           
-            self.gif_text_edit_label = QtWidgets.QLabel("GIF link input")
-            
+            self.open_gif_file_button = QtWidgets.QPushButton("open file")
+            self.open_gif_file_button.clicked.connect(self.open_gif_file)
+
             self.gif_text_edit.setPlaceholderText("Enter GIF url here")
             
-            self.my_layout.addWidget(self.gif_text_edit_label,4,2)
-            self.my_layout.addWidget(self.gif_text_edit,5,2)
-            self.my_layout.addWidget(self.generate_animated_qr_code,5,3)
+            self.my_layout.addWidget(self.open_gif_file_button, 1, 1)
+            self.my_layout.addWidget(self.gif_text_edit, 1, 2)
+            self.my_layout.addWidget(self.generate_animated_qr_code, 1, 3)
             self.update_qr()
-
-           
-
         else:
             try:
-                # If the checkbox is unchecked, remove the QLineEdit and QLabel from the layout
-                self.my_layout.removeWidget(self.gif_text_edit_label)
-                self.my_layout.removeWidget(self.gif_text_edit)
+                # If the checkbox is unchecked, remove the QLineEdit and QPushButton from the layout
                 
-                # Delete the QLineEdit and QLabel objects
-                self.gif_text_edit_label.deleteLater()
+                self.my_layout.removeWidget(self.gif_text_edit)
+                self.my_layout.removeWidget(self.generate_animated_qr_code)
+                self.my_layout.removeWidget(self.open_gif_file_button)
+                # Delete the QLineEdit and QPushButton objects
+                
                 self.gif_text_edit.deleteLater()
+                self.generate_animated_qr_code.deleteLater()
+                self.open_gif_file_button.deleteLater()
             except Exception:
                 pass
     
+    # Update QR code display
     def update_qr(self):
-        
-        print("Normal checked:", self.normal_qr_option.isChecked())
-        print("Animated checked:", self.animated_qr_option.isChecked())
-        # Rest of the code
-
-
         if self.normal_qr_option.isChecked():
-            # Get text from QTextEdit
-
+            # Generate and display normal QR code
             text = self.data_text_edit.text()
-            
-            # Generate QR code
-            
             qr_code = segno.make_qr(text)
-            
-            
-            # Save the QR code to a BytesIO object
             qr_bytes_io = io.BytesIO()
-            
-            
-
-            
-            # Save QR code to file-like object (instead of BytesIO)
-            qr_code.save(qr_bytes_io, kind='png',scale = 50, light = (self.background_color.name()).lower(), dark = (self.color.name()).lower())
-            
-            # Load the QR code from BytesIO into a QPixmap
+            qr_code.save(qr_bytes_io, kind='png', scale=50, light=(self.background_color.name()).lower(), dark=(self.color.name()).lower())
             pixmap = QtGui.QPixmap()
             pixmap.loadFromData(qr_bytes_io.getvalue())
-
-            # Set the QPixmap to the QLabel for display
             self.image_label.setPixmap(pixmap)
-        # elif self.animated_qr_option.isChecked() and self.generate_animated_qr_code_is_clicked() :
-            
-        
-        #     try:
-        #         text = self.data_text_edit.text()
-        #         qrcode = segno.make(text, error='h')
-        #         url = self.gif_text_edit.text() 
-        #         bg_file = urlopen(url)
-                
-        #         qrcode.to_artistic(background=bg_file, target="animated.gif", scale=10)
 
-                
-        #         movie = QtGui.QMovie('animated.gif')
-        #         self.image_label.setMovie(movie)
-        #         movie.start()
-        #     except ValueError:
-        #         pass
-
-
-    def pickColor(self,background):
+    # Pick background or foreground color
+    def pickColor(self, background):
         if background:
             background_color_dialog = QtWidgets.QColorDialog.getColor()
-
             if background_color_dialog.isValid():
-
-                # Update the color label text with the selected color
                 self.background_color = background_color_dialog
                 self.update_qr()
         else:
             color_dialog = QtWidgets.QColorDialog.getColor()
-
             if color_dialog.isValid():
-                # Update the color label text with the selected color
                 self.color = color_dialog
                 self.update_qr()
+
+    # Generate animated QR code on button click
     def generate_animated_qr_code_is_clicked(self):
         try:
             text = self.data_text_edit.text()
             qrcode = segno.make(text, error='h')
-            url = self.gif_text_edit.text() 
-            bg_file = urlopen(url)
-            
-            qrcode.to_artistic(background=bg_file, target="animated.gif", scale=10,light = (self.background_color.name()).lower(), dark = (self.color.name()).lower())
+            if not self.file_url:
+                url = self.gif_text_edit.text() 
+            else:
+                url = self.file_url.toString()
+                
 
-            
+            bg_file = urlopen(url)
+            qrcode.to_artistic(background=bg_file, target="animated.gif", scale=10, light=(self.background_color.name()).lower(), dark=(self.color.name()).lower())
             movie = QtGui.QMovie('animated.gif')
             self.image_label.setMovie(movie)
             movie.start()
         except Exception:
-            QtWidgets.QMessageBox.critical(self, "Error", f"Please provide a url path to a gif")
-
-    
+            QtWidgets.QMessageBox.critical(self, "Error", f"Please provide a valid URL for the GIF")
+    def open_gif_file(self):
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(parent=self,caption="Select a .gif file",directory=os.getcwd(),filter="*.gif")
+        if fileName:
+        # Convert the file path to a URL
+            self.file_url = QtCore.QUrl.fromLocalFile(fileName)
+            self.gif_text_edit.setText("file uploaded")
+            return self.file_url.toString()
+# Run the application
 def main():
     app = QtWidgets.QApplication(sys.argv)
-
     window = MyApp()
-    window.resize(400,600)
-    
+    window.resize(650, 800)
     window.show()
-    
     sys.exit(app.exec())
 
 if __name__ == "__main__":
