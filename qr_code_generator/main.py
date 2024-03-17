@@ -59,7 +59,8 @@ class MyApp(QtWidgets.QWidget):
         self.update_qr()
         
         self.save_qr_button = QtWidgets.QPushButton("Save")
-        # self.save_qr_button.clicked.connect(...)
+
+        self.save_qr_button.clicked.connect(self.save_qr)
         self.my_layout.addWidget(self.save_qr_button,5,0)
         # Set the layout
         self.setLayout(self.my_layout)
@@ -145,6 +146,38 @@ class MyApp(QtWidgets.QWidget):
             self.file_url = QtCore.QUrl.fromLocalFile(fileName)
             self.gif_text_edit.setText("file uploaded")
             return self.file_url.toString()
+    def save_qr(self):
+
+        if self.normal_qr_option.isChecked():
+            # Open a file dialog to select the destination folder and file name
+            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(None, "Save Image", ".png", "PNG Files (*.png)")
+
+            # Check if a file path was selected
+            if file_path:
+                # Get the pixmap from the label
+                pixmap = self.image_label.pixmap()
+                
+                # Save the pixmap to the selected file path
+                if pixmap and pixmap.save(file_path, "PNG"):
+                    print("Image saved successfully.")
+                else:
+                    print("Failed to save the image.")
+        else:
+            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(None, "Save Image", ".gif", "GIF Files (*.gif)")
+
+            # Check if a file path was selected
+            if file_path:
+                # Get the movie from the label
+                movie = self.image_label.movie()
+                
+                # Save the movie to the selected file path
+                if movie and movie.fileName():
+                    # Copy the original GIF file to the selected location
+                    import shutil
+                    shutil.copy(movie.fileName(), file_path)
+                    print("GIF saved successfully.")
+                else:
+                    print("Failed to save the GIF.")
 # Run the application
 def main():
     app = QtWidgets.QApplication(sys.argv)
